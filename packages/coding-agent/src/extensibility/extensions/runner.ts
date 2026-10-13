@@ -282,11 +282,11 @@ function createHandlerContext(
 		enumerable: true,
 		configurable: true,
 	});
-		Object.defineProperty(scoped, "signal", {
-			value: handlerSignal,
-			enumerable: true,
-			configurable: true,
-		});
+	Object.defineProperty(scoped, "signal", {
+		value: handlerSignal,
+		enumerable: true,
+		configurable: true,
+	});
 	return scoped;
 }
 

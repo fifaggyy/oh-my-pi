@@ -2148,10 +2148,7 @@ export interface ExtensionContextActions {
 	getPendingPlanReview?: () => PlanReviewRequestedEvent | undefined;
 	openPlanReview?: () => Promise<boolean>;
 	getContextUsage: () => ContextUsage | undefined;
-	judge?: <Q extends Questions>(
-		request: JudgmentRequest<Q>,
-		options?: JudgeOptions,
-	) => Promise<JudgmentResult<Q>>;
+	judge?: <Q extends Questions>(request: JudgmentRequest<Q>, options?: JudgeOptions) => Promise<JudgmentResult<Q>>;
 	elideToolResults?: (
 		toolCallIds: readonly string[],
 		options?: { headChars?: number; signal?: AbortSignal },

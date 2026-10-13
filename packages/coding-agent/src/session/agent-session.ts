@@ -8161,6 +8161,8 @@ export class AgentSession implements SettingsScope {
 			getPendingPlanReview: () => undefined,
 			openPlanReview: async () => false,
 			getContextUsage: () => this.getContextUsage(),
+			judge: (request, options) => this.judge(request, options),
+			elideToolResults: (toolCallIds, options) => this.elideToolResults(toolCallIds, options),
 			getAsyncJobSnapshot: () => this.getAsyncJobSnapshot(),
 			waitForIdle: () => this.waitForIdle(),
 			newSession: async options => {
