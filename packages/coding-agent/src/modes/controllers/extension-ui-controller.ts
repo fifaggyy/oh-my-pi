@@ -243,6 +243,9 @@ export class ExtensionUiController {
 			getPendingPlanReview: () => this.ctx.getPendingPlanReview(),
 			openPlanReview: () => this.ctx.openPlanReview({ fromExtension: true }),
 			getContextUsage: () => this.ctx.session.getContextUsage(),
+			judge: (request, judgeOptions) => this.ctx.session.judge(request, judgeOptions),
+			elideToolResults: (toolCallIds, elideOptions) =>
+				this.ctx.session.elideToolResults(toolCallIds, elideOptions),
 			compact: instructionsOrOptions => this.#compactSession(instructionsOrOptions),
 			getSystemPrompt: () => this.ctx.session.systemPrompt,
 			runEphemeralTurn: args => this.ctx.session.runEphemeralTurn(args),
@@ -474,6 +477,9 @@ export class ExtensionUiController {
 			getPendingPlanReview: () => this.ctx.getPendingPlanReview(),
 			openPlanReview: () => this.ctx.openPlanReview({ fromExtension: true }),
 			getContextUsage: () => this.ctx.session.getContextUsage(),
+			judge: (request, judgeOptions) => this.ctx.session.judge(request, judgeOptions),
+			elideToolResults: (toolCallIds, elideOptions) =>
+				this.ctx.session.elideToolResults(toolCallIds, elideOptions),
 			compact: instructionsOrOptions => this.#compactSession(instructionsOrOptions),
 			getSystemPrompt: () => this.ctx.session.systemPrompt,
 			runEphemeralTurn: args => this.ctx.session.runEphemeralTurn(args),

@@ -351,6 +351,9 @@ Handlers and tool `execute` receive `ctx` with:
 - `models` (read-only model query — see below)
 - `localProtocolOptions` (optional calling-session `local://` root mapping for external tool bridges)
 - `getContextUsage()`
+- `signal` is the active handler's cancellation signal; undefined outside event-handler dispatch
+- `judge(request, options?)` asks the configured `judge` role for typed decisions and records billed attempts in session usage
+- `elideToolResults(toolCallIds, { headChars?, signal? })` rewrites only those tool results, keeping the requested verbatim head and an artifact recovery link
 - `getAsyncJobSnapshot()` returns the current session's read-only async-job snapshot, or `null` when no session owns the context
 - `compact(instructionsOrOptions?)`: accepts summary focus text or `CompactOptions`, including one-off `mode: "soft" | "remote" | "snapcompact"`, `onComplete`, `onError`, and `suppressContinuation`
 - `isIdle()`, `hasPendingMessages()`, `abort()`

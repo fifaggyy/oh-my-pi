@@ -2626,6 +2626,9 @@ export class AcpAgent implements Agent {
 				hasPendingMessages: () => record.session.queuedMessageCount > 0,
 				shutdown: () => {},
 				getContextUsage: () => record.session.getContextUsage(),
+				judge: (request, judgeOptions) => record.session.judge(request, judgeOptions),
+				elideToolResults: (toolCallIds, elideOptions) =>
+					record.session.elideToolResults(toolCallIds, elideOptions),
 				getSystemPrompt: () => record.session.systemPrompt,
 				runEphemeralTurn: args => record.session.runEphemeralTurn(args),
 				compact: instructionsOrOptions => runExtensionCompact(record.session, instructionsOrOptions),

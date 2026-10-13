@@ -45,9 +45,13 @@ import type {
 	AssistantMessageEventStream,
 	Context,
 	ImageContent,
+	JudgeOptions,
+	JudgmentRequest,
+	JudgmentResult,
 	Model,
 	ModelSpec,
 	ProviderResponseMetadata,
+	Questions,
 	ServiceTier,
 	ServiceTierByFamily,
 	ServiceTierFamily,
@@ -57,6 +61,7 @@ import type {
 	TSchema,
 	UsageProvider,
 } from "@oh-my-pi/pi-ai";
+import type { ShakeResult } from "../../session/shake-types";
 import type { OAuthCredentials, OAuthLoginCallbacks } from "@oh-my-pi/pi-ai/oauth/types";
 import type {
 	AutocompleteItem,
@@ -641,6 +646,15 @@ export interface ExtensionContext {
 	mode: ExtensionMode;
 	/** Get current context usage for the active model. */
 	getContextUsage(): ContextUsage | undefined;
+	/** Active event-handler cancellation signal; undefined outside handler dispatch. */
+	signal?: AbortSignal;
+	/** Ask the configured `judge` role for typed decisions; usage is journaled to this session. */
+	judge<Q extends Questions>(request: JudgmentRequest<Q>, options?: JudgeOptions): Promise<JudgmentResult<Q>>;
+	/** Replace selected tool results with a retained head and an artifact recovery link. */
+	elideToolResults(
+		toolCallIds: readonly string[],
+		options?: { headChars?: number; signal?: AbortSignal },
+	): Promise<ShakeResult>;
 	/** Get a read-only snapshot of async jobs owned by this session. */
 	getAsyncJobSnapshot(): AsyncJobSnapshot | null;
 	/** Compact the session context (interactive mode shows UI). */
@@ -2134,6 +2148,14 @@ export interface ExtensionContextActions {
 	getPendingPlanReview?: () => PlanReviewRequestedEvent | undefined;
 	openPlanReview?: () => Promise<boolean>;
 	getContextUsage: () => ContextUsage | undefined;
+	judge?: <Q extends Questions>(
+		request: JudgmentRequest<Q>,
+		options?: JudgeOptions,
+	) => Promise<JudgmentResult<Q>>;
+	elideToolResults?: (
+		toolCallIds: readonly string[],
+		options?: { headChars?: number; signal?: AbortSignal },
+	) => Promise<ShakeResult>;
 	compact: (instructionsOrOptions?: string | CompactOptions) => Promise<void>;
 	getSystemPrompt: () => string[];
 	runEphemeralTurn?: (options: EphemeralTurnOptions) => Promise<EphemeralTurnResult>;

@@ -142,6 +142,36 @@ describe("AgentSession shake", () => {
 			expect(text).toContain(`artifact://${result.artifactId}`);
 			expect(text).toContain("shaken");
 		});
+		it("elides only selected results while retaining their verbatim head and recovery artifact", async () => {
+			const selectedText = `verbatim-head:${"A".repeat(1200)}`;
+			const untouchedText = "B".repeat(1200);
+			seedHeavyToolResult(selectedText, "bash");
+			seedHeavyToolResult(untouchedText, "read");
+			const before = branchToolResults();
+			const selectedId = before[0]?.toolCallId;
+			const untouchedId = before[1]?.toolCallId;
+			if (!selectedId || !untouchedId) throw new Error("Expected both seeded tool results");
+
+			const result = await session.elideToolResults([selectedId], { headChars: 16 });
+
+			expect(result.toolResultsDropped).toBe(1);
+			expect(result.tokensFreed).toBeGreaterThan(0);
+			expect(result.artifactId).toBeDefined();
+			const after = branchToolResults();
+			const selected = after.find(toolResult => toolResult.toolCallId === selectedId);
+			const untouched = after.find(toolResult => toolResult.toolCallId === untouchedId);
+			if (!selected || !untouched || !result.artifactId) throw new Error("Expected rewritten and untouched results");
+			const selectedOutput = selected.content.map(block => (block.type === "text" ? block.text : "")).join("");
+			const untouchedOutput = untouched.content.map(block => (block.type === "text" ? block.text : "")).join("");
+			expect(selectedOutput.startsWith(selectedText.slice(0, 16))).toBe(true);
+			expect(selectedOutput).toContain("fast-jev-compaction truncated");
+			expect(selectedOutput).toContain(`artifact://${result.artifactId}`);
+			expect(untouched.prunedAt).toBeUndefined();
+			expect(untouchedOutput).toBe(untouchedText);
+			const artifactPath = await sessionManager.getArtifactPath(result.artifactId);
+			if (!artifactPath) throw new Error("Expected shake artifact path");
+			expect(await Bun.file(artifactPath).text()).toContain(selectedText);
+		});
 
 		it("continues artifact-less when ordinary shake cannot allocate an artifact", async () => {
 			seedHeavyToolResult("X".repeat(4000));

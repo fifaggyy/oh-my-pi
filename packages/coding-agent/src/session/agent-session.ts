@@ -45,6 +45,7 @@ import {
 	type ToolChoiceDirective,
 } from "@oh-my-pi/pi-agent-core";
 import {
+	AGGRESSIVE_SHAKE_CONFIG,
 	type CompactionPreparation,
 	type CompactionResult,
 	calculatePromptTokens,
@@ -59,12 +60,16 @@ import type {
 	Context,
 	ImageContent,
 	Judge,
+	JudgeOptions,
+	JudgmentRequest,
+	JudgmentResult,
 	Message,
 	MessageAttribution,
 	Model,
 	OAuthAccountIdentity,
 	ProviderResponseMetadata,
 	ProviderSessionState,
+	Questions,
 	ResetCreditAccountStatus,
 	ResetCreditRedeemOutcome,
 	ResetCreditTarget,
@@ -3101,6 +3106,21 @@ export class AgentSession implements SettingsScope {
 			telemetry: this.agent.telemetry,
 			cache: sharedJudgmentCache(),
 		});
+	}
+
+	/** Answer typed questions through the configured `judge` role. */
+	judge<Q extends Questions>(request: JudgmentRequest<Q>, options?: JudgeOptions): Promise<JudgmentResult<Q>> {
+		return resolveJudge({
+			settings: this.settings,
+			registry: this.#modelRegistry,
+			sessionModel: this.model,
+			sessionId: this.sessionId,
+			metadataResolver: provider => this.agent.metadataForProvider(provider),
+			purpose: "extension",
+			onUsage: journalJudgmentUsage(this.sessionManager),
+			telemetry: this.agent.telemetry,
+			cache: sharedJudgmentCache(),
+		}).judge(request, options);
 	}
 
 	/**
@@ -6498,6 +6518,22 @@ export class AgentSession implements SettingsScope {
 	/** Reduce stored context with the selected shake strategy. */
 	shake(mode: ShakeMode, opts: { config?: ShakeConfig; signal?: AbortSignal } = {}): Promise<ShakeResult> {
 		return this.#maintenance.shake(mode, opts);
+	}
+
+	/** Elide only the selected tool results, keeping a verbatim head and artifact-backed recovery. */
+	elideToolResults(
+		toolCallIds: readonly string[],
+		options: { headChars?: number; signal?: AbortSignal } = {},
+	): Promise<ShakeResult> {
+		const requestedHeadChars = options.headChars ?? 300;
+		const headChars = Number.isFinite(requestedHeadChars) ? Math.max(0, Math.floor(requestedHeadChars)) : 300;
+		return this.#maintenance.shake("elide", {
+			config: { ...AGGRESSIVE_SHAKE_CONFIG, protectTokens: 0, minSavings: 1 },
+			toolResultsOnly: true,
+			toolResultIds: new Set(toolCallIds),
+			toolResultHeadChars: headChars,
+			signal: options.signal,
+		});
 	}
 
 	/** Compact the active session history. */

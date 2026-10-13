@@ -861,6 +861,8 @@ export class SessionMaintenance {
 			requireArtifact?: boolean;
 			isCurrent?: () => boolean;
 			toolResultsOnly?: boolean;
+			toolResultIds?: ReadonlySet<string>;
+			toolResultHeadChars?: number;
 		} = {},
 	): Promise<ShakeResult> {
 		if (mode === "images") {
@@ -933,9 +935,15 @@ export class SessionMaintenance {
 		});
 		let regions = collectShakeRegions(branchEntries, this.#tokenizer, config);
 		if (opts.toolResultsOnly) regions = regions.filter(region => region.kind === "toolResult");
-		if (regions.length === 0) {
-			return { mode, toolResultsDropped: 0, blocksDropped: 0, tokensFreed: 0 };
+		if (opts.toolResultIds !== undefined) {
+			regions = regions.filter(
+				region =>
+					region.kind === "toolResult" &&
+					region.entry.message.role === "toolResult" &&
+					opts.toolResultIds?.has(region.entry.message.toolCallId),
+			);
 		}
+		if (regions.length === 0) return { mode, toolResultsDropped: 0, blocksDropped: 0, tokensFreed: 0 };
 
 		let reservedArtifact: { id?: string; path?: string } = {};
 		try {
@@ -946,7 +954,9 @@ export class SessionMaintenance {
 		assertCurrent();
 		let artifactId = reservedArtifact.id;
 		const calculateReplacementState = (id: string | undefined) => {
-			const replacements = regions.map((region, index) => this.#shakeElidePlaceholder(region, index, id));
+			const replacements = regions.map((region, index) =>
+				this.#shakeElidePlaceholder(region, index, id, opts.toolResultHeadChars),
+			);
 			const replacementTokenCounts = replacements.map(replacement =>
 				replacement.length > 0 ? this.#tokenizer.countTokens(replacement) : 0,
 			);
@@ -1068,7 +1078,22 @@ export class SessionMaintenance {
 		}
 	}
 
-	#shakeElidePlaceholder(region: ShakeRegion, index: number, artifactId: string | undefined): string {
+	#shakeElidePlaceholder(
+		region: ShakeRegion,
+		index: number,
+		artifactId: string | undefined,
+		headChars?: number,
+	): string {
+		if (region.kind === "toolResult" && headChars !== undefined) {
+			const head = region.originalText.slice(0, headChars);
+			if (region.originalText.length <= headChars + 120) return region.originalText;
+			const message = region.entry.message;
+			const errorSuffix = message.role === "toolResult" && message.isError ? " (error)" : "";
+			const recovery = artifactId
+				? `; recover: artifact://${artifactId} (region ${index + 1})`
+				: "; re-run the tool if needed";
+			return `${head.length > 0 ? `${head}\n` : ""}[fast-jev-compaction truncated ${region.originalText.length - head.length} chars of this tool result${errorSuffix}${recovery}]`;
+		}
 		if (artifactId) {
 			return `[shaken ~${region.tokens} tokens — recover: artifact://${artifactId} (region ${index + 1})]`;
 		}

@@ -145,6 +145,8 @@ export async function initializeExtensions(session: AgentSession, options: Initi
 			hasPendingMessages: () => session.queuedMessageCount > 0,
 			shutdown,
 			getContextUsage: () => session.getContextUsage(),
+			judge: (request, judgeOptions) => session.judge(request, judgeOptions),
+			elideToolResults: (toolCallIds, elideOptions) => session.elideToolResults(toolCallIds, elideOptions),
 			getSystemPrompt: () => session.systemPrompt,
 			runEphemeralTurn: args => session.runEphemeralTurn(args),
 			compact: instructionsOrOptions => runExtensionCompact(session, instructionsOrOptions),

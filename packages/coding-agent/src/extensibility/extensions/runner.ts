@@ -282,6 +282,11 @@ function createHandlerContext(
 		enumerable: true,
 		configurable: true,
 	});
+		Object.defineProperty(scoped, "signal", {
+			value: handlerSignal,
+			enumerable: true,
+			configurable: true,
+		});
 	return scoped;
 }
 
@@ -518,6 +523,10 @@ export class ExtensionRunner {
 	#hasPendingMessagesFn: () => boolean = () => false;
 	#getContextUsageFn: () => ContextUsage | undefined = () => undefined;
 	#compactFn: (instructionsOrOptions?: string | CompactOptions) => Promise<void> = async () => {};
+	#judgeFn: NonNullable<ExtensionContextActions["judge"]> = () =>
+		Promise.reject(new Error("ctx.judge is not available in this host."));
+	#elideToolResultsFn: NonNullable<ExtensionContextActions["elideToolResults"]> = () =>
+		Promise.reject(new Error("ctx.elideToolResults is not available in this host."));
 	#getSystemPromptFn: () => string[] = () => [];
 	#runEphemeralTurnFn?: ExtensionContextActions["runEphemeralTurn"];
 	#ephemeralTurnBlocker = new AsyncLocalStorage<string | undefined>();
@@ -829,6 +838,11 @@ export class ExtensionRunner {
 		if (contextActions.openPlanReview) this.#openPlanReviewFn = contextActions.openPlanReview;
 		this.#getContextUsageFn = contextActions.getContextUsage;
 		this.#compactFn = contextActions.compact;
+		this.#judgeFn =
+			contextActions.judge ?? (() => Promise.reject(new Error("ctx.judge is not available in this host.")));
+		this.#elideToolResultsFn =
+			contextActions.elideToolResults ??
+			(() => Promise.reject(new Error("ctx.elideToolResults is not available in this host.")));
 		this.#getSystemPromptFn = contextActions.getSystemPrompt;
 		this.#runEphemeralTurnFn = contextActions.runEphemeralTurn;
 
@@ -1394,6 +1408,8 @@ export class ExtensionRunner {
 			ui: this.#uiContext,
 			mode: this.#mode,
 			getContextUsage: () => this.#getContextUsageFn(),
+			judge: (request, options) => this.#judgeFn(request, options),
+			elideToolResults: (toolCallIds, options) => this.#elideToolResultsFn(toolCallIds, options),
 			compact: instructionsOrOptions => this.#compactFn(instructionsOrOptions),
 			getAsyncJobSnapshot: () => this.#getAsyncJobSnapshotFn(),
 			hasUI: this.hasUI(),
