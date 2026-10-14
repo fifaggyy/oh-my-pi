@@ -1,0 +1,77 @@
+name: Build and upload artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    name: Build on Ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build JS/TS packages
+        run: |
+          if [ -f package.json ]; then
+            pnpm -w build || true
+          else
+            echo "No root package.json, skipping JS build"
+          fi
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build Rust crate
+        run: |
+          if [ -f Cargo.toml ]; then
+            cargo build --release
+          else
+            echo "No Rust project at repo root; skipping Rust build"
+          fi
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+
+          # Copy common JS dist/build outputs if they exist
+          find . -type d \( -name dist -o -name build \) -print0 | while IFS= read -r -d '' d; do
+            cp -r "$d" artifacts/ || true
+          done
+
+          # Copy Rust binary from common locations
+          if [ -f target/release/oh-my-pi ]; then
+            cp target/release/oh-my-pi artifacts/ || true
+          fi
+
+          if [ -f target/release/* ]; then
+            cp target/release/* artifacts/ || true
+          fi
+
+          echo "Artifacts collected:"
+          ls -la artifacts || true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oh-my-pi-binaries
+          path: artifacts
